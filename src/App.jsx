@@ -12,6 +12,7 @@ function App() {
   const [history, setHistory] = useState([])
   const [historyLoading, setHistoryLoading] = useState(true)
   const [tone, setTone] = useState('Professional')
+  const [rating, setRating] = useState(5)
 
   const sentimentStyles = {
     Positive: 'bg-emerald-50 text-emerald-700 ring-emerald-600/20',
@@ -43,7 +44,7 @@ function App() {
     setSentiment(null)
 
     try {
-      const result = await generateReply(reviewText, tone)
+      const result = await generateReply(reviewText, tone, rating)
       setSentiment(result.sentiment)
       setReply(result.reply)
 
@@ -105,9 +106,26 @@ function App() {
                       : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-50'
                   }`}
                 >
+                  
                   {t}
                 </button>
               ))}
+            </div>
+            <div className="mb-4">
+              <p className="text-xs font-medium text-slate-500 mb-2">Star rating</p>
+              <div className="flex gap-1">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <button
+                    key={star}
+                    onClick={() => setRating(star)}
+                    className="text-2xl leading-none transition-transform hover:scale-110"
+                    aria-label={`${star} star`}
+                  >
+                    {star <= rating ? '★' : '☆'}
+                  </button>
+                ))}
+                <span className="ml-2 text-sm text-slate-500 self-center">{rating}/5</span>
+              </div>
             </div>
             <textarea
               value={reviewText}
