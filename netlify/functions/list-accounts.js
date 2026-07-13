@@ -29,13 +29,17 @@ export async function handler() {
       refresh_token: data.refresh_token,
     });
 
-    // Get a fresh access token
-    await client.getAccessToken();
+    // Force a fresh access token
+    const { token } = await client.getAccessToken();
 
-    const business = google.mybusinessaccountmanagement({
-      version: "v1",
-      auth: client,
-    });
+    return {
+    statusCode: 200,
+    body: JSON.stringify({
+        hasRefreshToken: !!data.refresh_token,
+        hasAccessToken: !!token,
+        accessTokenPrefix: token ? token.substring(0, 20) : null,
+    }),
+    };
 
     const response = await business.accounts.list();
 
