@@ -1,6 +1,5 @@
 import { OAuth2Client } from "google-auth-library";
 import { createClient } from "@supabase/supabase-js";
-import { google } from "googleapis";
 
 const supabase = createClient(
   process.env.VITE_SUPABASE_URL,
@@ -9,51 +8,74 @@ const supabase = createClient(
 
 export async function handler() {
   try {
-    // Get the first connected Google account
+    // Get the connected Google account
     const { data, error } = await supabase
-      .from("google_tokens")
-      .select("*")
-      .limit(1)
-      .single();
+    .from("google_tokens")
+    .select("*")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .single();
 
     if (error || !data) {
       throw new Error("No Google account connected.");
     }
 
+    // Create OAuth client
     const client = new OAuth2Client(
       process.env.GOOGLE_CLIENT_ID,
       process.env.GOOGLE_CLIENT_SECRET
     );
 
+    // Load refresh token
     client.setCredentials({
       refresh_token: data.refresh_token,
     });
 
-    // Force a fresh access token
+    // Get a fresh access token
     const { token } = await client.getAccessToken();
 
-    return {
-    statusCode: 200,
-    body: JSON.stringify({
-        hasRefreshToken: !!data.refresh_token,
-        hasAccessToken: !!token,
-        accessTokenPrefix: token ? token.substring(0, 20) : null,
-    }),
-    };
+    if (!token) {
+      throw new Error("Failed to obtain access token.");
+    }
 
-    const response = await business.accounts.list();
+    // Call Google Business Profile API
+    const response = await fetch(
+      "https://mybusinessaccountmanagement.googleapis.com/v1/accounts",
+      {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: "application/json",
+        },
+      }
+    );
+
+    const body = await response.json();
 
     return {
-      statusCode: 200,
-      body: JSON.stringify(response.data, null, 2),
+      statusCode: response.status,
+      body: JSON.stringify(
+        {
+          success: response.ok,
+          googleStatus: response.status,
+          googleResponse: body,
+        },
+        null,
+        2
+      ),
     };
   } catch (err) {
     return {
       statusCode: 500,
-      body: JSON.stringify({
-        success: false,
-        error: err.message,
-      }),
+      body: JSON.stringify(
+        {
+          success: false,
+          error: err.message,
+          stack: err.stack,
+        },
+        null,
+        2
+      ),
     };
   }
 }
